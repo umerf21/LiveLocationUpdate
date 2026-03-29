@@ -1,36 +1,13 @@
-import { useAppSelector } from '@/hooks/useRedux';
-import {
-  selectVehiclePlate,
-  selectVehicleStats,
-  selectVehicleTotalDistance,
-} from '@/store/slices/vehicleSlice';
-
 import gasStationIcon from '@/assets/gas-station.svg';
 import speedIcon from '@/assets/speed-icon.svg';
 
 import styles from './Stats.module.scss';
-
-const FUEL_PCT = 72;
-
-function coordsLine(lat: number, lng: number) {
-  return `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`;
-}
-
-function fmtKm(n: number) {
-  return n >= 100 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n.toFixed(2);
-}
+import { useStats } from './useStats';
 
 export function Stats({ isPopupVisible }: { isPopupVisible: boolean }) {
-  const plate = useAppSelector(selectVehiclePlate);
-  const stats = useAppSelector(selectVehicleStats);
-  const tripKm = useAppSelector(selectVehicleTotalDistance);
+  const { plate, speed, fuel, trip, where } = useStats();
 
   if (!isPopupVisible) return null;
-
-  const speed = stats ? `${Math.round(stats.speed)} km/h` : '—';
-  const fuel = stats ? `${FUEL_PCT}%` : '—';
-  const trip = stats ? fmtKm(tripKm) : '—';
-  const where = stats ? coordsLine(stats.lat, stats.lng) : 'Waiting…';
 
   return (
     <div className={styles.card}>

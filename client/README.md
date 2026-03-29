@@ -10,7 +10,7 @@ A browser client that **subscribes to one vehicle by license plate**, receives *
 
 - A **Mapbox** map with a **route trail** whose **last segment** eases with the vehicle (same timing as the marker), plus a **soft glow** under the line  
 - A **last-location marker** that **animates** between socket points (`useAnimatedLatLng`) and shows **pulsing rings** in CSS so the current position reads clearly  
-- A **stats panel** (shown after tapping the marker) with speed, fuel placeholder, and trip distance  
+- A **stats panel** (shown after tapping the marker) with speed, fuel placeholder, trip distance, and a **human-readable “last location”** label via **Mapbox reverse geocoding** (`getLocationName` + **`useStats`**) when a token is present; otherwise coordinates are shown  
 
 State is held in **Redux**; realtime data arrives over **Socket.IO**.
 
@@ -25,6 +25,7 @@ State is held in **Redux**; realtime data arrives over **Socket.IO**.
 | Build / dev | **Vite 5** | Fast HMR; `@/` → `src/` alias in `vite.config.ts`. |
 | State | **Redux Toolkit** + **react-redux** | Single store; `vehicle` slice for live stats and history. |
 | Maps | **mapbox-gl** + **react-map-gl** (Mapbox entry) | Basemap, GeoJSON route, `Marker`, camera APIs. |
+| HTTP | **axios** | Reverse geocoding request in `vehicel.api.ts` (token via query param). |
 | Realtime | **socket.io-client** | Matches Nest/Socket.IO backend; subscribe by plate. |
 | Styling | **Sass** + **CSS modules** (`.module.scss`) | Scoped component styles; shared tokens in `theme/`. |
 | Lint | **ESLint 9** + **typescript-eslint** | `npm run lint`. |
@@ -57,10 +58,10 @@ client/
     │       ├── vehicle.types.ts
     │       ├── vehicle.constant.ts   # Socket event names
     │       ├── vehicle.socket.ts     # Socket.IO singleton + subscribe helpers
-    │       └── vehicel.api.ts        # Optional HTTP helpers (e.g. geocoding)
+    │       └── vehicel.api.ts        # MAPBOX_GEOCODING_ENDPOINT, getLocationName (axios)
     ├── components/
     │   ├── Map/               # Map.tsx, useMap.ts, styles, barrel index
-    │   └── Stats/             # Stats panel + styles
+    │   └── Stats/             # Stats.tsx, useStats.ts, styles, barrel index
     ├── feature/
     │   └── vehicleTracking/   # VehicleTracking screen + useVehicleTracking hook
     ├── hooks/
@@ -102,9 +103,9 @@ Path alias: `@/` → `src/` (see `vite.config.ts`).
 | Root UI | `src/App.tsx` | Shell; mounts the vehicle-tracking feature. |
 | Feature | `src/feature/vehicleTracking/` | Composes map + stats; wires socket → Redux; demo plate constant. |
 | Map | `src/components/Map/` | Mapbox map, GeoJSON route (animated last segment + glow), pulsing marker, camera follow (`useMap`). |
-| Stats | `src/components/Stats/` | Overlay card when the marker is clicked. |
+| Stats | `src/components/Stats/` | `Stats` UI; **`useStats`** hook reads Redux and loads place name for “Last location”. |
 | Realtime API | `src/api/vehicle/vehicle.socket.ts` | Singleton Socket.IO client, subscribe/unsubscribe, event names. |
-| Types & REST helper | `src/api/vehicle/vehicle.types.ts`, `vehicel.api.ts` | Payload shapes; optional Mapbox Geocoding helper. |
+| Types & HTTP | `src/api/vehicle/vehicle.types.ts`, `vehicel.api.ts` | Payload shapes; **`MAPBOX_GEOCODING_ENDPOINT`** + **`getLocationName`** (axios reverse geocode). |
 | State | `src/store/slices/vehicleSlice.ts` | Vehicle plate, latest stats, path history, derived distance & average speed. |
 | Metrics | `src/utils/vehicleMetrics.ts`, `distance.ts` | Haversine segments, rolling trip distance and average speed. |
 | Hooks | `src/hooks/` | `useVehicleSocket`, `useAnimatedLatLng`, `useRedux` typings. |
@@ -120,7 +121,17 @@ Path alias: `@/` → `src/` (see `vite.config.ts`).
 2. **`useVehicleTracking`** dispatches **`setVehicleStats`** when new data arrives, and **`setSocketConnected`** when the socket connects or disconnects.  
 3. **`vehicleSlice`** appends each point to **`history`**, updates **`stats`**, and recomputes **`totalDistance`** and **`avgSpeed`** via **`computeNextVehicleMetrics`**.  
 4. **`Map`** reads `stats` and `history`: draws the polyline, places the marker at an **interpolated** lat/lng (`useAnimatedLatLng`), and **`useMap`** calls **`flyTo`** so the camera follows the vehicle.  
-5. **`Stats`** reads Redux and shows the panel when **`isPopupVisible`** is true (marker click toggles this for a few seconds).
+5. **`Stats`** uses **`useStats`** (see below): it mirrors Redux-driven speed / trip / plate and resolves **Last location** text. The panel is shown when **`isPopupVisible`** is true (marker click).
+
+### Stats panel: reverse geocoding (last location label)
+
+| Piece | Implementation |
+|-------|------------------|
+| **API** | `src/api/vehicle/vehicel.api.ts` exports **`MAPBOX_GEOCODING_ENDPOINT`** (Mapbox Geocoding API v5 base URL) and **`getLocationName(lat, lng)`**, which calls **`axios.get`** with **`access_token`** in **`params`** (not hard-coded in the path). |
+| **Hook** | **`useStats`** in `src/components/Stats/useStats.ts` selects vehicle data from Redux, runs **`getLocationName`** when **`stats.lat` / `stats.lng`** change (with abort on stale responses), and returns **`where`**: place name on success, or formatted coordinates if the token is missing, the request fails, or Mapbox returns no feature. |
+| **UI** | **`Stats.tsx`** consumes **`useStats()`** and renders the card. |
+
+The same **`VITE_MAPBOX_ACCESS_TOKEN`** used for the map is used for geocoding; ensure your Mapbox token allows the **Geocoding API** where applicable.
 
 ### Animated marker and map line (last location)
 
@@ -151,7 +162,7 @@ Include **both** of the following:
 | Variable | Purpose |
 |----------|---------|
 | **`VITE_SOCKET_SERVER_URL`** | Base URL of the Socket.IO backend (local default below). |
-| **`VITE_MAPBOX_ACCESS_TOKEN`** | Mapbox **public** access token for the map (you must supply your own; see placeholder in the example). |
+| **`VITE_MAPBOX_ACCESS_TOKEN`** | Mapbox **public** access token for the **map** and **reverse geocoding** in the stats panel (you must supply your own; see placeholder in the example). |
 
 Example **`.env`** for local development (adjust ports if your stack differs):
 
@@ -166,7 +177,7 @@ VITE_MAPBOX_ACCESS_TOKEN=<add_your_own_mapbox_public_token_here>
 
 The dev server for this client runs at **http://localhost:5173** by default (`npm run dev`). The socket URL above points at **http://localhost:3000** so the browser can reach a backend listening on port **3000**.
 
-If `VITE_SOCKET_SERVER_URL` is omitted, the app falls back to **`http://localhost:3000`**. If **`VITE_MAPBOX_ACCESS_TOKEN`** is missing or still a placeholder, the map area shows a short hint instead of loading tiles.
+If `VITE_SOCKET_SERVER_URL` is omitted, the app falls back to **`http://localhost:3000`**. If **`VITE_MAPBOX_ACCESS_TOKEN`** is missing or still a placeholder, the map area shows a short hint instead of loading tiles, and **Last location** in the stats panel falls back to **coordinates** (geocoding is skipped).
 
 ---
 
