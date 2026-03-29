@@ -1,9 +1,11 @@
-import { Map } from '@/components/Map/Map';
+import { VehicleTracking } from '@/feature/vehicleTracking';
+
+import styles from './App.module.scss';
 
 function App() {
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: '100dvh' }}>
-      <Map />
+    <div className={styles.shell}>
+      <VehicleTracking />
     </div>
   );
 }

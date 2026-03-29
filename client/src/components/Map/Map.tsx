@@ -1,61 +1,57 @@
 import * as React from 'react';
-import MapComponent from 'react-map-gl/mapbox';
+import MapComponent, { Marker } from 'react-map-gl/mapbox';
+import type { MapRef } from 'react-map-gl/mapbox';
 
-import { useVehicleSocket } from '@/hooks/useVehicleSocket';
+import markerNav from '@/assets/navigation-final.svg';
+import { useAppSelector } from '@/hooks/useRedux';
+import { selectVehicleStats } from '@/store/slices/vehicleSlice';
+
+import { useMap } from './useMap';
+import styles from './Map.module.scss';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-const DEMO_PLATE = 'DXB-CX-36357';
+type MapProps = { onMarkerClick?: () => void };
 
-export const Map = () => {
-  const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+export const Map = ({ onMarkerClick }: MapProps) => {
+  const stats = useAppSelector(selectVehicleStats);
+  const { mapRef, initialViewState } = useMap(stats);
+  const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ?? null;
 
-  const { data, connected } = useVehicleSocket(DEMO_PLATE);
-
-  React.useEffect(() => {
-    console.log('[Map] vehicle socket connected:', connected);
-  }, [connected]);
-
-  React.useEffect(() => {
-    if (data) {
-      console.log('[Map] vehicle data:', data);
-    }
-  }, [data]);
-
-  if (!mapboxToken) {
+  if (!token) {
     return (
-      <div
-        style={{
-          padding: '1rem',
-          width: '100%',
-          height: '100%',
-          minHeight: '100dvh',
-          boxSizing: 'border-box',
-        }}
-      >
+      <div className={styles.envHint}>
+        Add <code>VITE_MAPBOX_ACCESS_TOKEN</code> to <code>client/.env</code>.
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        minHeight: '100dvh',
-        position: 'relative',
-      }}
-    >
+    <div className={styles.shell}>
       <MapComponent
-        mapboxAccessToken={mapboxToken}
-        initialViewState={{
-          longitude: -122.4,
-          latitude: 37.8,
-          zoom: 14,
-        }}
+        ref={mapRef as React.RefObject<MapRef>}
+        mapboxAccessToken={token}
+        initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/streets-v9"
-      />
+        mapStyle="mapbox://styles/mapbox/navigation-night-v1"
+      >
+        {stats ? (
+          <Marker longitude={stats.lng} latitude={stats.lat} anchor="center">
+           <img
+            src={markerNav}
+              alt=""
+              role="button"
+              tabIndex={0}
+              className={styles.markerImg}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarkerClick?.();
+              }}
+            style={{ cursor: "pointer" }}
+          />
+          </Marker>
+        ) : null}
+      </MapComponent>
     </div>
   );
-}
+};

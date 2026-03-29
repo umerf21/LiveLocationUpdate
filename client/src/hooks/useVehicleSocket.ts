@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react';
 import {
   subscribeToVehicle,
   getVehicleSocket,
-  type VehicleTelemetry,
+  type VehicleStats,
 } from '@/api';
 
 export interface UseVehicleSocketResult {
-  /** Latest telemetry for the subscribed plate, or null if none / not subscribed */
-  data: VehicleTelemetry | null;
+  /** Latest stats for the subscribed plate, or null if none / not subscribed */
+  data: VehicleStats | null;
   /** Whether the Socket.IO connection is currently established */
   connected: boolean;
 }
@@ -18,7 +18,7 @@ export interface UseVehicleSocketResult {
  * Cleans up listener and emits `unsubscribeFromVehicle` on unmount or when `plate` changes.
  */
 export function useVehicleSocket(plate: string | null): UseVehicleSocketResult {
-  const [data, setData] = useState<VehicleTelemetry | null>(null);
+  const [data, setData] = useState<VehicleStats | null>(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {

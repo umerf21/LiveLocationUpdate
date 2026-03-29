@@ -1,4 +1,4 @@
-export interface VehicleTelemetry {
+export interface VehicleStats {
   lat: number;
   lng: number;
   angle: number;
@@ -9,5 +9,5 @@ export interface VehicleTelemetry {
 
 export interface VehicleDataPayload {
   plate: string;
-  data: VehicleTelemetry;
+  data: VehicleStats;
 }
