@@ -144,23 +144,38 @@ Defined in `src/api/vehicle/vehicle.constant.ts`:
 
 ### Environment variables
 
-Create **`client/.env`** (Vite exposes only variables prefixed with `VITE_`):
+Add a **`.env`** file in the **`client/`** directory (same level as `package.json`). Vite only reads variables that start with **`VITE_`**.
+
+Include **both** of the following:
+
+| Variable | Purpose |
+|----------|---------|
+| **`VITE_SOCKET_SERVER_URL`** | Base URL of the Socket.IO backend (local default below). |
+| **`VITE_MAPBOX_ACCESS_TOKEN`** | Mapbox **public** access token for the map (you must supply your own; see placeholder in the example). |
+
+Example **`.env`** for local development (adjust ports if your stack differs):
 
 ```env
-# WebSocket server (defaults to http://localhost:3000 if omitted)
+# Backend WebSocket / HTTP (Socket.IO) — default local port is often 3000
 VITE_SOCKET_SERVER_URL=http://localhost:3000
 
-# Required for the map: tiles, styles, and the map canvas
-VITE_MAPBOX_ACCESS_TOKEN=pk.your_mapbox_token
+# Mapbox — replace the placeholder with your own token from https://account.mapbox.com/
+# Do not commit real keys; keep .env out of version control if it contains secrets.
+VITE_MAPBOX_ACCESS_TOKEN=<add_your_own_mapbox_public_token_here>
 ```
 
-Without a Mapbox token, the map shows a short hint instead of loading the basemap.
+The dev server for this client runs at **http://localhost:5173** by default (`npm run dev`). The socket URL above points at **http://localhost:3000** so the browser can reach a backend listening on port **3000**.
+
+If `VITE_SOCKET_SERVER_URL` is omitted, the app falls back to **`http://localhost:3000`**. If **`VITE_MAPBOX_ACCESS_TOKEN`** is missing or still a placeholder, the map area shows a short hint instead of loading tiles.
 
 ---
 
 ## How to run
 
-**Prerequisites:** Node.js (LTS recommended), npm, and the backend WebSocket server running where `VITE_SOCKET_SERVER_URL` points.
+**Prerequisites:** Node.js (LTS recommended), npm, and the backend WebSocket server reachable at the URL you set in **`VITE_SOCKET_SERVER_URL`** (e.g. **http://localhost:3000**).
+
+1. Create **`client/.env`** with **`VITE_SOCKET_SERVER_URL`** and **`VITE_MAPBOX_ACCESS_TOKEN`** as in [Environment variables](#environment-variables).  
+2. Install and start the dev server:
 
 ```bash
 cd client
@@ -168,9 +183,7 @@ npm install
 npm run dev
 ```
 
-Ensure `client/.env` exists with `VITE_SOCKET_SERVER_URL` and `VITE_MAPBOX_ACCESS_TOKEN` (see [Environment variables](#environment-variables)).
-
-Open the URL Vite prints (typically **http://localhost:5173**).
+3. Open **http://localhost:5173** (or the URL Vite prints in the terminal).
 
 | Script | Description |
 |--------|-------------|
