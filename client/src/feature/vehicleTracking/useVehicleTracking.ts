@@ -12,7 +12,7 @@ const TIMER = 5000
 export function useVehicleTracking(plate: string | null) {
   const dispatch = useAppDispatch();
   const { data, connected } = useVehicleSocket(plate);
-  const [showPopup, setShowPopup] = useState(true)
+  const [showPopup, setShowPopup] = useState(false)
 
   useEffect(() => {
     dispatch(setSocketConnected(connected));
